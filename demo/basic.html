@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+	<meta charset="utf-8">
+	<title>Draw Me A Kanji</title>
+	<link rel="stylesheet" href="demo.css"/>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+	<script src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.4.1.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.2.8/raphael.min.js"></script>
+	<script src="../src/dmak.js"></script>
+	<script src="../src/dmakLoader.js"></script>
+	<script src="../src/anime.min.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/2.5.0/svg.js"></script>
+	<script src="https://d3js.org/d3.v5.min.js"></script>
+	<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.13/svg.min.js"></script> -->
+	<script src='https://cdnjs.cloudflare.com/ajax/libs/svg.js/2.7.1/svg.js'></script>
+	<!-- Export SVG -->
+	<script src="FileSaver.js"></script> 
+	<style>
+		.content{
+			display: grid;
+    		grid-template-columns: 25% 75%;
+		}
+		 #wrap-svg{
+		width:500px;
+		height:500px;
+		}
+		#moving {
+			height: 20px;
+			width: 20px;
+			background: red;
+			position: absolute;
+			top:0;
+			left: 0;
+		}
+		.wrap-enter{
+			margin:5px 0;
+		}
+		.wrap-scale{
+			display: grid;
+			grid-template-columns: max-content max-content;
+			width: 90%;
+			margin: auto;
+		}
+		.wrap-scale,
+		.GenerateSVG{
+			display:none;
+		}
+		#submit{
+	
+			background-color: #4CAF50; /* Green */
+			border: none;
+			color: white;
+			padding: 15px 32px;
+			text-align: center;
+			text-decoration: none;
+			display: inline-block;
+			font-size: 16px;
+			margin: 4px 2px;
+			cursor: pointer;
+		}
+		.wrap-enter{
+			display:grid;
+			grid-template-columns: 40% 60%;
+		}
+		.wrap-enter > label{
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+		.wrap-enter > input{
+			width: 100%;
+			padding: 12px 20px;
+			margin: 8px 0;
+			display: inline-block;
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			box-sizing: border-box;
+		}
+		#aa{
+			width:120px;
+			height:120px;
+			transform: scale(2.5);
+			position: absolute;
+			top: 40%;
+			left: 58%;
+		}
+		.GenerateSVG{
+			background-color: #4CAF50;
+			border: none;
+			color: white;
+			padding: 15px 32px;
+			text-align: center;
+			text-decoration: none;
+			
+			font-size: 16px;
+			margin: 4px 2px;
+			cursor: pointer;
+		}
+		#input-scale{
+			width: 100%;
+			padding: 12px 20px;
+			margin: 4px 0;
+			display: inline-block;
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			box-sizing: border-box;
+		}
+		#scale{
+			background-color: #4CAF50;
+			border: none;
+			color: white;
+			padding: 12px 32px;
+			text-align: center;
+			text-decoration: none;	
+			font-size: 16px;
+			margin: 4px 2px;
+			cursor: pointer;
+		}
+		.st5{
+			fill:#FFFFFF;
+			stroke:#040000;
+			stroke-width:0.2835;
+			stroke-linecap:round;
+			stroke-linejoin:round;
+			stroke-miterlimit:10;
+		}
+		#double-stroke > #wrap-path-stroke-small  path{
+			stroke-width: 3px !important;
+			stroke: red !important;
+		}
+	</style>
+	</head>
+	<body>
+		<div class="content">
+			<div class="content-left">
+				
+				<div class="wrap">
+					<div class="wrap-enter">
+						<label>Characters</label>
+						<input id ='text' type="text" placeholder="Characters">
+					</div>
+					<div class="wrap-enter">
+					<label>Diameter of the circle</label>
+						<input id="input-dk" type="number" placeholder="Diameter of the circle" >
+					</div>
+					<div class="wrap-enter">
+					<label>Stroke width</label>
+						<input id="input-stroke" type="number" placeholder="Stroke width" >
+					</div>
+					<button id = 'submit'> submit</button>
+				</div>
+				<div id="konnichiha"></div>
+				<div class="wrap-scale">
+					<input id="input-scale" type="number" placeholder="Scale" >
+					<button id="scale" type="button">Scale</button>
+				</div>
+				<button class="GenerateSVG" type="button" onclick="GenerateSVG('aa', 'All')">Export SVG</button>
+				<button class="GenerateSVG" type="button" onclick="GenerateSVG('stroke', 'Stroke')">Export Stroke</button>
+				<button class="GenerateSVG" type="button" onclick="GenerateSVG('circle', 'Circle')">Export Circle</button>
+				
+			</div>
+			<div class="content-right">
+				<div id ='kk'>
+					<svg id="stroke"></svg>	<!--tách riêng path text-->
+					<svg id="circle"></svg>	<!--tách riêng circle-->
+					<svg id="double-stroke"></svg> <!-- 2 nét đè nhau(to-nhỏ) -->
+					<svg id="aa"></svg>
+				</div>
+			</div>
+		</div>
+	
+
+	<script>
+		var svgkk;
+		var svgCopy;
+		var targetPath;
+		var duongKinh;
+		var strokeWidth;
+		var quantity_path;
+		var countCircle = [];
+		var arrCirclePath = [];
+		var GenerateSVG;
+		var circlePoint = [];
+		var corner,result,tren, duoi;	//line in circle
+		var net ;	//stroke riêng
+		var double_stroke;	//2 stroke đè nhau (to nhỏ)
+		var circle_simple;		
+		$(document).ready(function(){
+			$('#submit').click(function(){
+				var text = $('#text').val();
+				var dmak = new Dmak(text, {'step':0.00001,'element': "konnichiha", "uri": "http://kanjivg.tagaini.net/kanjivg/kanji/", 'stroke.animated':'false',"stroke.order.attr.font-size": '40px'});
+				duongKinh = $('#input-dk').val(); // get đường kính hình tròn
+				strokeWidth = $('#input-stroke').val(); // get stroke-width path				
+				if(duongKinh == "" || duongKinh < 1){
+					duongKinh = 15;	//nếu k chọn mặc định sẽ là 15.
+				}
+
+				setTimeout(function()
+				{
+
+					svgkk = $('#konnichiha').children('svg').html();	
+					var net_to = '<g id="wrap-path-stroke-big">' + $('#konnichiha').children('svg').html() + '</g>';
+					var net_nho = '<g id="wrap-path-stroke-small">' + $('#konnichiha').children('svg').html() + '</g>'; //net nhỏ màu đỏ ở giữa
+					double_stroke = net_to + net_nho;
+					net = '<g id="wrap-path-stroke">' + $('#konnichiha').children('svg').html() + '</g>'; //lấy nét chữ riêng để xuất SVG (nhóm chung1 group <g></g>)
+					circle_simple = $('#circle').html();
+
+					$('#aa').html(svgkk);
+					$('#stroke').html(net);
+					$('#stroke').children('g').children("path[stroke|='#cccccc']").remove(); // vẽ svg chứa nét chữ riêng (xóa 2 path tự sinh ra --)
+					
+					$('#double-stroke').html(double_stroke);
+					
+					$('#double-stroke').children('g').children("path[stroke|='#cccccc']").remove();
+					
+					svgCopy = $('#aa').html();
+					quantity_path = $('#aa').children('path').length;	//số nét chữ
+					var Circle = [];
+					for( var k = 2 ; k < quantity_path; k++ )
+					{
+						targetPath = $('#aa').children('path').eq(k); 						//get path
+						countCircle[k] 	= targetPath[0].getTotalLength()/duongKinh; 		// số vòng tròn trong 1 path
+						var distance 	= targetPath[0].getTotalLength()/countCircle[k]; 	// khoảng cách 2 vòng tròn
+						var length 		= targetPath[0].getTotalLength();					// chiều daif
+						arrCirclePath.push(countCircle[k]);		
+						for(var i = 0; i < countCircle[k]; i++){
+							svgCopy+= '<circle class="circle_simple" id="move_circle'+k+i+0+'" cx="0" cy="0" r="'+duongKinh/2+'" fill="red"></circle>';
+							circle_simple += '<circle class="circle_simple" id="move_circle'+i+k+'" cx="0" cy="0" r="'+duongKinh/2+'" fill="#fb070778"></circle>'; //Vẽ vòng tròn vào svg riêng		
+						}
+						$('#aa').html(svgCopy);
+						$('#circle').html(circle_simple);
+					}
+
+					for( var k = 2 ; k < quantity_path; k++ )
+					{
+						var targetPathx = $('#aa').children('path').eq(k); //get path
+						for(var i = 0; i < countCircle[k]; i++){		
+							var temp = i * distance;
+							var point = targetPathx[0].getPointAtLength(temp);							
+							var moveCircle = document.getElementById('move_circle'+k+i+0);
+							moveCircle.setAttribute("transform","translate("+ point.x + ","+ point.y +")");								
+							circlePoint.push(point);	//mảng tọa độ của vòng tròn		
+							moveCircle = document.getElementById('move_circle'+k+i+0).outerHTML;	//get html circle to add arr
+							Circle.push(moveCircle); //circle arr	
+						}		
+					}
+					
+					// Vẽ vòng tròn vào svg riêng (tách riêng vòng tròn)
+					for( var k = 2 ; k < quantity_path; k++ )
+					{
+						var targetPathx = $('#aa').children('path').eq(k); //get path
+						for(var i = 0; i < countCircle[k]; i++){
+							var temp = i * distance;
+							var point = targetPathx[0].getPointAtLength(temp);							
+							var $moveCircle = document.getElementById('move_circle'+i+k);
+							$moveCircle.setAttribute("transform","translate("+ point.x + ","+ point.y +")");															
+						}		
+					}
+
+					
+
+					//line in circle (Bình)
+					var lengthCircle = circlePoint.length;
+					// svgCopy = $('#aa').html();
+					var lineArr = []; //arr chứa line
+					var line; // biến để chứa html của line
+					circle_simple = $('#circle').html(); // vẽ vòng tròn vào svg riêng
+					var led = 0; // số thứ tự của các đèn
+					var point_end = 0; // điểm cuối cùng của 1 part
+					for( var k = 0 ; k < arrCirclePath.length; k++ ){
+						point_end = Math.floor(arrCirclePath[k]);
+							for(var l = 0 ; l < arrCirclePath[k] ; l++){
+								if ( point_end == 0 )	//nếu path chỉ có 1 điểm
+								{
+									tren =  (circlePoint[led].y - circlePoint[led].y);
+									duoi = 	(circlePoint[led].x - circlePoint[led].x);
+									result = Math.atan2(tren, duoi);		//goc quay
+									corner = result*180/Math.PI;
+								}
+								else if(led == 0 || l == 0) // điểm đầu tiên 
+								{
+									tren  = (circlePoint[led+1].y - circlePoint[led].y);	//y2-y1
+									duoi =  (circlePoint[led+1].x - circlePoint[led].x);	//x2-x1	
+									result = Math.atan2(tren, duoi);		//goc quay
+									corner = result*180/Math.PI;			//đổi qua độ
+								}
+								else if(led == lengthCircle-1 ||  l == point_end ){ // điểm cuối cùng
+									tren =  (circlePoint[led].y - circlePoint[led-1].y);
+									duoi = 	(circlePoint[led].x - circlePoint[led-1].x);
+									result = Math.atan2(tren, duoi);		//goc quay
+									corner = result*180/Math.PI;			//đổi qua độ
+								}
+								else{ 
+									tren = (circlePoint[led+1].y - circlePoint[led-1].y);
+									duoi = (circlePoint[led+1].x - circlePoint[led-1].x);
+									result = Math.atan2(tren, duoi);		//goc quay
+									corner = result*180/Math.PI;			//đổi qua độ
+								}
+								
+										
+								// svgCopy+= '<path class="st5 circle_simple" style="transform: rotate('+corner+'deg) scale(0.2);transform-origin:'+circlePoint[led].x+'px'+' '+circlePoint[led].y+'px'+' " d="M' +Math.ceil(circlePoint[led].x + 11.5)+','+Math.ceil(circlePoint[led].y - 1.95)+ '.14h-1.8v-0.89h-2.97v-0.57h-14.85v0.57h-2.97v0.89h-1.79v3.46h1.79v0.89h2.97v0.57h14.85v-0.57h2.97v-0.89h1.8V'+Math.ceil(circlePoint[led].y)+'.14z"/>';			
+								line = '<path class="st5 circle_simple" style="transform: rotate('+corner+'deg) scale(0.2);transform-origin:'+circlePoint[led].x+'px'+' '+circlePoint[led].y+'px'+' " d="M' +Math.ceil(circlePoint[led].x + 11.5)+','+Math.ceil(circlePoint[led].y - 1.95)+ '.14h-1.8v-0.89h-2.97v-0.57h-14.85v0.57h-2.97v0.89h-1.79v3.46h1.79v0.89h2.97v0.57h14.85v-0.57h2.97v-0.89h1.8V'+Math.ceil(circlePoint[led].y)+'.14z"/>';			
+								circle_simple += '<path class="st5 circle_simple" style="transform: rotate('+corner+'deg) scale(0.2);transform-origin:'+circlePoint[led].x+'px'+' '+circlePoint[led].y+'px'+' " d="M' +Math.ceil(circlePoint[led].x + 11.5)+','+Math.ceil(circlePoint[led].y - 1.95)+ '.14h-1.8v-0.89h-2.97v-0.57h-14.85v0.57h-2.97v0.89h-1.79v3.46h1.79v0.89h2.97v0.57h14.85v-0.57h2.97v-0.89h1.8V'+Math.ceil(circlePoint[led].y)+'.14z"/>';		// vẽ line vào vòng tròn vào svg riêng	
+								led++;
+								lineArr.push(line); // push line vào chung 1 mảng
+							}
+					}
+					
+					$('#circle').html(circle_simple);
+					// $('#aa').html(svgCopy);
+					// end line in circle
+
+
+					// Nhóm Group circle and path
+					net += '<g id="wrap-circle-line">';
+					for(var t = 0 ; t < Circle.length ; t++)
+					{
+						net += "<g class='circle-line'>"+Circle[t]+lineArr[t]+"</g>";
+					}
+					net += '</g>'
+					$('#aa').html(net); //vẽ toàn bộ chung 1 svg(stroke, line, circle), special : line and circle đã được nhóm vào group
+					$('#aa').children('g').children("path[stroke|='#cccccc']").remove(); //xóa 2 path tự sinh ra(---)
+					
+					//end nhóm group
+					
+
+					
+					//Tùy chỉnh đường kính, độ dày chữ, scale path.
+					if(strokeWidth == "" || strokeWidth < 1){
+						$('#kk').children('svg').children('g').children("path[stroke|='#bf0000']").css('stroke-width','15'); //nếu k chọn mặc định sẽ là 15.
+					}
+					else{
+						$('#kk').children('svg').children('g').children("path[stroke|='#bf0000']").css('stroke-width',strokeWidth); //set stroke-width path
+					}
+					
+					// Hiện nút Scale và GenerateSVG
+					$('.GenerateSVG').css('display','inline-block');
+					$('.wrap-scale').css('display','inline-block');
+					$('#scale').click(function(){
+						
+						$('#kk').children('svg').css("transform",'scale('+$('#input-scale').val()+')');
+					});
+					// end tùy chỉnh
+			
+			
+
+					// tách vòng chứa line riêng
+					var qqq = $('.stroke').eq(0).html();
+					$('#circle').html(qqq);
+
+				}, 1000);
+
+
+
+				//Export svg
+				// id => id của svg cần export
+				// fileName => tên của file được export (ví dụ: stroke.svg)
+				GenerateSVG = function(id, fileName){
+					var svg_data = document.getElementById(id).innerHTML //put id of your svg element here
+					var head = '<svg title="graph" version="1.1" xmlns="http://www.w3.org/2000/svg">'
+					//if you have some additional styling like graph edges put them inside <style> tag
+					var style = '<style>circle {cursor: pointer;stroke-width: 1.5px;}text {font: 10px arial;}path {stroke: DimGrey;stroke-width: 1.5px;}</style>'
+
+					var full_svg = head +  style + svg_data + "</svg>"
+					var blob = new Blob([full_svg], {type: "image/svg+xml"});  
+					saveAs(blob, fileName+'.svg');
+			
+				};
+				//Export stroke
+				// GenerateSVGStroke = function(){
+				// 	var svg_data = document.getElementById("stroke").innerHTML //put id of your svg element here
+				// 	var head = '<svg title="graph" version="1.1" xmlns="http://www.w3.org/2000/svg">'
+				// 	//if you have some additional styling like graph edges put them inside <style> tag
+				// 	var style = '<style>circle {cursor: pointer;stroke-width: 1.5px;}text {font: 10px arial;}path {stroke: DimGrey;stroke-width: 1.5px;}</style>'
+
+				// 	var full_svg = head +  style + svg_data + "</svg>"
+				// 	var blob = new Blob([full_svg], {type: "image/svg+xml"});  
+				// 	saveAs(blob, "stroke.svg");
+			
+				// };
+
+				// //Export circle
+				// GenerateSVGCircle = function(){
+				// 	var svg_data = document.getElementById("circle").innerHTML //put id of your svg element here
+				// 	var head = '<svg title="graph" version="1.1" xmlns="http://www.w3.org/2000/svg">'
+				// 	//if you have some additional styling like graph edges put them inside <style> tag
+				// 	var style = '<style>circle {cursor: pointer;stroke-width: 1.5px;}text {font: 10px arial;}path {stroke: DimGrey;stroke-width: 1.5px;}</style>'
+
+				// 	var full_svg = head +  style + svg_data + "</svg>"
+				// 	var blob = new Blob([full_svg], {type: "image/svg+xml"});  
+				// 	saveAs(blob, "circle.svg");
+			
+				// };
+		
+			});
+			
+		
+
+		});
+		
+
+		
+		
+
+
+	</script>
+
+	</body>
+</html>
